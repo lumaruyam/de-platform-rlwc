@@ -1,0 +1,12 @@
+   {
+     "rule": [
+       {
+         "action": { "type": "SetStorageClass", "storageClass": "NEARLINE" },
+         "condition": { "age": 365, "matchesStorageClass": ["STANDARD"] }
+       },
+       {
+         "action": { "type": "AbortIncompleteMultipartUpload" },
+         "condition": { "age": 1 }
+       }
+     ]
+   }
