@@ -19,10 +19,10 @@ These are the "who, what, where, and when" contexts that describe the event. To 
 | Dimension | Description | Example Attributes (to be defined in L05) |
 |---|---|---|
 | **Dim Date** | The calendar day the sales occurred. | `date_key`, `full_date`, `year`, `month`, `day_of_week`, `is_weekend` |
-| **Dim Product** | The specific beauty product being sold. | `product_key`, `product_id`, `product_name`, `category`, `brand`, `seller_id`. |
+| **Dim Product** | The specific beauty product being sold. | `product_key`, `product_id`, `product_name`, `category`, `brand`. |
 | **Dim Country** | The destination country for the order. | `country_key`, `country_code`, `country_name`, `region` (e.g., EU, EMEA). |
 
-*(Note: If the ML team later needs seller-specific forecasting, a `Dim Seller` might be added, but for now, product and country are the primary axes.)*
+*(Note: the seller cannot be a dimension at this grain: an order line records the product, not who sold it.)*
 
 ## Facts
 
@@ -30,13 +30,13 @@ These are the quantitative measurements of the event. They are numeric, additive
 
 | Fact | Description | Formula / Logic |
 |---|---|---|
-| **Units Sold** | The total number of a specific product sold on a specific day in a specific country. | `SUM(order_items.quantity)` |
+| **Units Sold** | The total number of a specific product sold on a specific day in a specific country. | `SUM(order_items.qty)` |
 | **Order Count** | The number of distinct orders containing this product on this day in this country. *(Useful for ML to distinguish between one large B2B order vs. many small B2C orders).* | `COUNT(DISTINCT order_id)` |
-| **Revenue** | The total monetary value of the units sold. | `SUM(order_items.quantity * order_items.price)` |
+| **Revenue** | The total monetary value of the units sold. | `SUM(order_items.qty * order_items.price_at_purchase)` |
 
 ## Engineering Implications for Ingestion (L03)
 
 To make this star schema possible in Lesson 5, our ingestion pipelines must guarantee the following columns are captured from the source PostgreSQL database and preserved (unmodified) in the Bronze layer:
 - **From `orders`:** `order_id`, `order_date`, `country` (or shipping country).
-- **From `order_items`:** `order_id`, `product_id`, `quantity`, `price`.
+- **From `order_items`:** `order_id`, `p_id`, `qty`, `price_at_purchase`.
 - **From `product`:** `product_id`, `product_name`, `category`, `brand`.
