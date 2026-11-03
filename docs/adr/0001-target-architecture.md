@@ -9,7 +9,7 @@
 
 Albert's Marketplace currently operates a single PostgreSQL database containing 25 tables. The web shop writes to it in real-time (checkout, reviews, passwords, saved cards), while analysts query the exact same tables directly for reporting. A nightly CSV export is also manually opened in spreadsheets by the business.
 
-This current "two-tier" setup creates three critical problems:
+   This setup is none of the four architectures: it is an operational database used for analytics, with no integration of several sources and no history. It creates three critical problems:
 1. **Workload collision:** The web shop and analysts compete for the same database resources, meaning checkout performance is tied to reporting load.
 2. **Inconsistent reporting:** Analysts query live, mutable tables at different times without a consistent snapshot, which is why "the reports disagree on revenue, and nobody can say which one is right."
 3. **Security and Governance risk:** The database holds sensitive data (saved cards, passwords) and analysts can technically access it, violating European data protection law (GDPR). Furthermore, the data is up to 24 hours stale due to the nightly CSV bottleneck.
