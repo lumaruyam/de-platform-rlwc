@@ -23,7 +23,7 @@ All figures below come from our own measurements in L02 exercise 1 (Rania Mehria
 | Option | For | Against |
 |---|---|---|
 | **CSV, not partitioned** | Simple; opens in any tool. | 10,373,925 bytes for `order_items`, 2.9x larger than Parquet. No types: every column is text. A query must read every column. |
-| **Parquet, partitioned by day (`dt`)** (chosen) | 2.9x smaller than CSV. Types are kept. 31 objects for a month. A date filter reads only the days it needs. Same grain as the ML team's table. | Files are very small today (about 12 KB per day). |
+| **Parquet, partitioned by day (`dt`)** (chosen) | 2.9x smaller than CSV. Types are kept. 31 objects for a month. A date filter reads only the days it needs. Same grain as the ML team's table. |    Files are very small today: about 12 KB per day (372,214 bytes for August 2026 / 31 days). |
 | **Parquet, partitioned by day and product (`dt` + `p_id`)** | Could help a query that filters on one product. | 8,649 objects for one month instead of 31 (279x). About 85x more bytes stored. The same query took 373 ms instead of 87 ms (about 4x slower). |
 | **Parquet, not partitioned** | One file per table, the largest possible files. | Every query reads the whole table, even for one day. |
 
@@ -63,6 +63,6 @@ We did not compare compression codecs; Snappy is the default and was the only on
 - Bronze does not have one shape: dated tables are partitioned, reference tables are not. The data dictionary must say which is which.
 
 **What we will have to watch, and what would make us change**
-- **File size.** Today a daily partition is about 12 KB, which is far below "keep files large". If daily files stay under about 1 MB once the pipelines run, we will move to **monthly partitions** (`month=YYYY-MM`) and write a new ADR that supersedes this one.
+- **File size.**    Today a daily partition is about 12 KB (372,214 bytes for one month / 31 days; the 3,546,854 bytes measured in step 2 are the whole history, not one month), which is far below "keep files large". If daily files stay under about 1 MB once the pipelines run, we will move to **monthly partitions** (`month=YYYY-MM`) and write a new ADR that supersedes this one.
 - **Query patterns.** If most queries start to filter on product or seller, the partition key must be reviewed.
 - **Personal data.** The export contains names, addresses and phone numbers. The data dictionary marks them, and L03 decides what must never be ingested.
