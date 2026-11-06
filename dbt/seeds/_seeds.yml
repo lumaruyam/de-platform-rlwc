@@ -1,0 +1,8 @@
+version: 2
+
+seeds:
+  - name: category
+    description: "The two product ranges, copied from the source table public.category (checked 2026-11-06)."
+    columns:
+      - name: category_id
+        data_tests: [unique, not_null]

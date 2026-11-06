@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: fct_order_items
+    description: "One row per product per order. GRAIN: (order_id, p_id)."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, p_id]
+    columns:
+      - name: p_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: p_id
+      - name: order_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: country
+        description: "Country of the buyer's default address. 'unknown' when no address is found."
+        data_tests: [not_null]
+
+  - name: fct_daily_demand
+    description: "Units sold per product, per country, per day. GRAIN: (p_id, country, order_date). For the ML team."
+    columns:
+      - name: demand_key
+        data_tests: [unique, not_null]
+      - name: units
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+  - name: fct_monthly_revenue
+    description: "Revenue per month, before discounts. GRAIN: month. The one agreed revenue figure."
+    columns:
+      - name: month
+        data_tests: [unique, not_null]
+
+  - name: dim_product
+    description: "One row per product, with its range and rating."
+    columns:
+      - name: p_id
+        data_tests: [unique, not_null]
+
+  - name: dim_date
+    description: "One row per day."
+    columns:
+      - name: date_day
+        data_tests: [unique, not_null]

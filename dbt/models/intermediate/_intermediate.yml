@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: int_buyer_country
+    description: "One country per customer, from their default address."
+    columns:
+      - name: buyer_id
+        data_tests: [unique, not_null]

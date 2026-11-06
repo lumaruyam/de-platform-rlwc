@@ -1,0 +1,22 @@
+name: 'marketplace'
+version: '1.0.0'
+profile: 'marketplace'
+
+# Medallion layers, one BigQuery dataset each:
+#   staging + intermediate -> group2_silver (views: cleaned, typed, one row per real fact)
+#   marts                  -> group2_gold   (tables: answer named questions)
+models:
+  marketplace:
+    staging:
+      +schema: silver
+      +materialized: view
+    intermediate:
+      +schema: silver
+      +materialized: view
+    marts:
+      +schema: gold
+      +materialized: table
+
+seeds:
+  marketplace:
+    +schema: silver

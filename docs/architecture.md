@@ -4,7 +4,7 @@
 
 Albert's Marketplace is a European marketplace for beauty products. Today, one PostgreSQL database serves both the web shop and the analysts, so reports slow down checkout and two reports give two different revenue figures. The platform must serve two users: analysts, who need one agreed revenue figure, and the ML team, who need units sold per product, per country, per day. Daily freshness is enough for both; nothing needs real-time data. Two constraints matter: the shop's database must not carry analytical load, and passwords and card numbers must never leave it.
 
-## Architecture (after L04)
+## Architecture (after L05)
 
 Solid lines exist today. Dotted lines are planned.
 
@@ -29,15 +29,15 @@ flowchart LR
     gold[("Gold<br/>star schemas")]
   end
   bronze -->|"external tables, typed copy"| wh
-  wh -.->|"planned L05 (dbt)"| silver
-  silver -.-> gold
-  gold -.->|revenue reports| analysts[Analysts]
-  gold -.->|daily demand| ml[ML team]
+  wh -->|"dbt build, 35 tests"| silver
+  silver -->|dbt| gold
+  gold -->|fct_monthly_revenue| analysts[Analysts]
+  gold -->|fct_daily_demand| ml[ML team]
 ```
 
 Three paths write into bronze without a person: see [ADR-0003](adr/0003-ingestion-modes.md) for which mode each source uses, and [ingestion-failure-modes.md](ingestion-failure-modes.md) for what each one loses or duplicates. The first load, in L02, was done once by hand with [`ingestion/load_bronze_export.py`](../ingestion/load_bronze_export.py).
 
-Bronze is read by BigQuery in the same region. Fact tables are partitioned by month, and two materialized views precompute daily demand per product and per range. Measures and choices are in [warehouse-tuning.md](warehouse-tuning.md); the pricing model is in [ADR-0004](adr/0004-warehouse-pricing.md). Demand per country is not in the views yet: it needs the buyer's address, and comes with gold in L05.
+Bronze is read by BigQuery in the same region. Fact tables are partitioned by month, and two materialized views precompute daily demand per product and per range. Measures and choices are in [warehouse-tuning.md](warehouse-tuning.md); the pricing model is in [ADR-0004](adr/0004-warehouse-pricing.md). Silver and gold are built by dbt: see [dbt-models.md](dbt-models.md). Demand per country is in `fct_daily_demand`.
 
 ## Layers
 
@@ -64,3 +64,4 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | L02 | The diagram shows what exists: the bucket, its region, its layout, who can read it, and how bronze was filled |
 | L03 | Three paths into bronze: Airbyte, the orders extractor, the clickstream consumer; dead letter queue |
 | L04 | BigQuery warehouse: typed native tables, monthly partitions, clustering, two materialized views, billing cap |
+| L05 | Silver and gold built with dbt (group2_silver, group2_gold): 14 models, 35 tests, revenue reconciled to the cent, source freshness check |

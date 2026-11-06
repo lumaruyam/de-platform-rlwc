@@ -1,0 +1,13 @@
+# No secret here: oauth uses the gcloud login of whoever runs dbt
+# (gcloud auth application-default login).
+marketplace:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: data-engineering-i2
+      dataset: group2          # models go to group2_silver and group2_gold
+      location: europe-west1   # same region as the bucket and group2_wh
+      threads: 4
+      maximum_bytes_billed: 1073741824   # 1 GiB cap per query (ADR-0004)
