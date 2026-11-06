@@ -6,7 +6,7 @@ locals {
     gold   = "dbt gold: tables for analysts and the ML team (L05)"
   }
 
-  # Data classification (step 10, docs/data-classification.md).
+  # Data classification (step 10, docs/governance.md).
   # wh and silver hold buyer ids and addresses; gold holds no personal data.
   classification = {
     wh     = "confidential"

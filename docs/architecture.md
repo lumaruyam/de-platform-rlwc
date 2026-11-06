@@ -60,7 +60,7 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | [0007](adr/0007-idempotency.md) | Make every task idempotent, so any run can be repeated safely | Proposed |
 | [0008](adr/0008-infrastructure-as-code.md) | Adopt the bucket and datasets in Terraform, remote state | Proposed |
 | [0009](adr/0009-cost-attribution.md) | Label every resource for cost attribution, budget in code, daily cost alert | Proposed |
-| [0010](adr/0010-data-protection.md) | Mask personal data in silver, gold-only readers | Proposed |
+| [0010](adr/0010-data-classification.md) | Grant access by column class with policy tags, mask free text before silver | Proposed |
 
 ## Change log
 
@@ -75,4 +75,4 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | L07 | Airflow DAG `marketplace_daily_group2`: extract, load, dbt build, freshness, every day. See `docs/orchestration.md` |
 | L08 | Bucket and datasets declared in Terraform (`infra/`), imported with no change, remote state, `terraform plan` in CI. See `docs/infrastructure-as-code.md` |
 | L09 | Labels on every resource (Terraform), budget in code (off: no billing rights), daily cost alert in Airflow, partitioning gain in USD. See `docs/costs.md` |
-| L10 | PII redaction in dbt (reviews masked, author dropped), data classification labels, gold-only readers in Terraform, Airflow Fernet key. See `docs/security.md` |
+| L10 | PII redaction in dbt (reviews masked, author dropped), data classification labels, gold-only readers in Terraform, Airflow Fernet key. See `docs/security.md`. Then: a class and an owner for every column, access matrix, policy tags on 3 columns, erasure tested on one buyer. See `docs/governance.md` and `docs/runbooks/erasure.md` |

@@ -1,6 +1,6 @@
 # Security and governance
 
-Step 10. Least privilege, PII redaction, data classification (`docs/data-classification.md`).
+Step 10. Least privilege, PII redaction, data classification (`docs/governance.md`).
 
 ## PII redaction (dbt)
 
