@@ -1,4 +1,5 @@
 -- GRAIN: one product in one order.
+-- Defect fixed: duplicate order lines from at-least-once loads; one row per (order_id, p_id).
 SELECT
     order_id,
     p_id,

@@ -1,11 +1,12 @@
 version: 2
 
-# meta.classification: public | internal | confidential (docs/data-classification.md)
+# One staging model per source, each fixing a named defect (header of each .sql file).
+# meta.classification: public | internal | confidential (docs/governance.md)
 # meta.pii: none | indirect | direct
 
 models:
   - name: stg_orders
-    description: "One row per order, duplicates removed."
+    description: "One row per order. GRAIN: order_id. Duplicates from at-least-once loads removed."
     meta: {classification: confidential}
     columns:
       - name: order_id
@@ -16,7 +17,7 @@ models:
         meta: {pii: indirect}
 
   - name: stg_order_items
-    description: "One row per product per order."
+    description: "One row per product per order. GRAIN: (order_id, p_id). Duplicates removed."
     meta: {classification: internal}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
@@ -30,7 +31,7 @@ models:
                 expression: "> 0"
 
   - name: stg_review
-    description: "One row per review. E-mails and phone numbers masked, author dropped."
+    description: "One row per review. GRAIN: review_id. E-mails and phone numbers masked, author dropped."
     meta: {classification: internal}
     columns:
       - name: review_id
@@ -42,10 +43,26 @@ models:
                 values: [1, 2, 3, 4, 5]
                 quote: false
       - name: review_text
-        description: "Free text written by the customer, with [email] and [phone] masks."
+        description: "Free text written by the customer, with [email] and [phone] masks. Unclassified free text."
         meta: {pii: none}
 
+  - name: stg_product_reviews
+    description: "One row per review of a product. GRAIN: (p_id, review_id)."
+    meta: {classification: internal}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [p_id, review_id]
+    columns:
+      - name: review_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_review')
+                field: review_id
+
   - name: stg_product
+    description: "One row per product. GRAIN: p_id."
     meta: {classification: public}
     columns:
       - name: p_id
@@ -57,11 +74,22 @@ models:
                 to: ref('category')
                 field: category_id
 
-  - name: stg_customer_address
-    description: "Customer addresses reduced to the country."
+  - name: stg_customer_shipping
+    description: "One row per address of a customer. GRAIN: (c_id, address_id)."
     meta: {classification: confidential}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [c_id, address_id]
     columns:
       - name: c_id
         meta: {pii: indirect}
+
+  - name: stg_shipping_details
+    description: "One row per address, reduced to the country. GRAIN: address_id."
+    meta: {classification: internal}
+    columns:
+      - name: address_id
+        data_tests: [unique, not_null]
       - name: country
         meta: {pii: none}

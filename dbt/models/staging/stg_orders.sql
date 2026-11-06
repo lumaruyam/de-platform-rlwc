@@ -1,4 +1,6 @@
--- GRAIN: one order. Bronze keeps duplicates (at-least-once loads); silver keeps one row per order_id.
+-- GRAIN: one order.
+-- Defect fixed: duplicate orders. Every load is at-least-once (ADR-0003), so the same
+-- order_id can arrive twice; one row per order_id is kept.
 SELECT
     order_id,
     buyer_id,

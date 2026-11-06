@@ -2,12 +2,20 @@ version: 2
 
 sources:
   - name: marketplace
-    description: "Typed native tables in BigQuery, loaded from bronze in L04 (warehouse/01_native_tables.sql)."
+    description: >
+      Typed native tables in BigQuery (group2_wh), loaded from bronze: once in L04
+      (warehouse/01_native_tables.sql), then every day by the Airflow task load_warehouse
+      (warehouse/06_daily_load.sql). Lineage: docs/lineage.md.
     database: data-engineering-i2
     schema: group2_wh
     tables:
       - name: orders
         description: "One row per order."
+        # Why these numbers: the chain runs once a day, so a healthy source is at most
+        # about 1 day old. warn after 2 days = one daily run was missed.
+        # error after 7 days = a week without new orders: the ML team's daily demand
+        # is no longer usable, and Kafka's 1-week retention shows how long a gap
+        # upstream can last before data is lost for good.
         config:
           loaded_at_field: "CAST(order_date AS TIMESTAMP)"
           freshness:
@@ -20,6 +28,7 @@ sources:
             description: "Personal data (Yes, indirect)."
       - name: order_items
         description: "One row per product in an order."
+        # Same thresholds and same reason as orders: both arrive in the same daily run.
         config:
           loaded_at_field: "CAST(order_date AS TIMESTAMP)"
           freshness:
@@ -33,6 +42,7 @@ sources:
                   arguments:
                     to: source('marketplace', 'orders')
                     field: order_id
+      # Reference tables: full refresh every day, no event date, so no freshness check.
       - name: review
       - name: product_reviews
       - name: product
