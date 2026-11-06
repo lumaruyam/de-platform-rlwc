@@ -15,4 +15,8 @@ resource "google_bigquery_dataset" "layer" {
 
   # Dropping a dataset from the code must not drop its tables.
   delete_contents_on_destroy = false
+
+  labels = {
+    layer = each.key
+  }
 }

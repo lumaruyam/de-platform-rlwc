@@ -1,6 +1,7 @@
 variable "project_id" {
   description = "The shared class project."
   type        = string
+  default     = "data-engineering-i2"
 }
 
 variable "region" {
@@ -12,4 +13,5 @@ variable "region" {
 variable "group" {
   description = "Group short name, used in resource names."
   type        = string
+  default     = "group2"
 }

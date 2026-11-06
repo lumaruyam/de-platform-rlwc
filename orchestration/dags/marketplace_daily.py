@@ -23,6 +23,9 @@ gcloud = Mount(source=GCLOUD_DIR, target="/gcloud-ro", type="bind", read_only=Tr
 load_sql = Mount(source=f"{HOST_DIR}/warehouse/06_daily_load.sql",
                  target="/sql/load.sql", type="bind", read_only=True)
 
+cost_sql = Mount(source=f"{HOST_DIR}/warehouse/07_cost_check.sql",
+                 target="/sql/cost.sql", type="bind", read_only=True)
+
 GOOGLE_ENV = {
     "GOOGLE_APPLICATION_CREDENTIALS": "/gcloud-ro/application_default_credentials.json",
     "GOOGLE_CLOUD_PROJECT": "data-engineering-i2",
@@ -35,6 +38,9 @@ LOAD = (
     "c = bigquery.Client(project='data-engineering-i2', location='europe-west1'); "
     "[print(dict(r), flush=True) for r in c.query(open('/sql/load.sql').read()).result()]"
 )
+
+# Same runner, other file: month-to-date BigQuery spend; fails above the limit (step 9).
+COST = LOAD.replace("/sql/load.sql", "/sql/cost.sql")
 
 
 def alert(context):
@@ -108,4 +114,16 @@ with DAG(
         **COMMON,
     )
 
-    extract_orders >> load_warehouse >> dbt_build >> dbt_freshness
+    # Our own cost alert. Runs even if an earlier task failed (all_done).
+    cost_check = DockerOperator(
+        task_id="cost_check",
+        image="group2-dbt:0.1",
+        entrypoint=["python"],
+        command=["-c", COST],
+        environment=GOOGLE_ENV,
+        mounts=[gcloud, cost_sql],
+        trigger_rule="all_done",
+        **COMMON,
+    )
+
+    extract_orders >> load_warehouse >> dbt_build >> dbt_freshness >> cost_check
