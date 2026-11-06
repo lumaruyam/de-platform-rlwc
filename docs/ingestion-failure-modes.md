@@ -47,3 +47,21 @@ Also seen: `order_id` values have gaps (244,215 orders up to `order_id` 244,226)
 Known gap: these are a person's credentials on a person's laptop, not a service account. When the jobs move to Airflow (L07), they need a service account with access to this bucket only, and the database password in Airflow's own secret store.
 
 Seen on 2026-11-03: deleting files with `gcloud` asked for the account password again ("Reauthentication required"). A human credential can stop working at any time; a scheduled job cannot rely on one.
+
+## Airbyte connection `postgres-to-bronze`
+
+Source `marketplace-postgres` (cursor mode, no CDC), destination `bucket-bronze`
+(`gs://data-engineering-i2-group2/bronze/airbyte/<table>/load_dt=YYYY-MM-DD/`, Parquet Snappy).
+Runs every 24 hours. 7 tables. `customer` and `payment_details` are not selected.
+
+| What can go wrong | What happens | What we do |
+|---|---|---|
+| Sync stops in the middle | `orders` and `order_items` restart from the last saved `order_id`. Rows read again are written twice | At-least-once: duplicates removed in silver on the key |
+| Cursor uses `>=` the last value | The last `order_id` of each run is copied again | Same: dedupe in silver |
+| An order is changed or deleted in the shop | Not seen: the cursor only finds new `order_id` values | Accepted (ADR-0003). CDC would fix it, not set up |
+| Reference tables (Full refresh, Overwrite) | Each run replaces the copy. No history of old values | Accepted: we only need the current catalogue and addresses |
+| A new column appears in the source (for example a card number) | Not copied until someone approves the schema change | Schema changes need manual approval in Airbyte |
+| `load_dt` is the load date, not the order date | A day's folder holds what was loaded that day | Order date comes from `order_date` in the data, never from the folder |
+| Database connection without SSL | Data travels in clear between Airbyte and the database | Local only (`host.docker.internal`). In production: SSL on the database |
+| Airbyte reads with the `postgres` admin account | Airbyte could read or change every table | To fix: a read-only user limited to the 7 tables |
+| Bucket access uses an HMAC key tied to a personal account | The key has all of that person's rights | To fix: a service account that can only write to `bronze/airbyte/` (needs admin rights on the shared project) |

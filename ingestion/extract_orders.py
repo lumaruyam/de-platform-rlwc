@@ -94,6 +94,10 @@ def main():
         return
 
     df = pd.DataFrame(rows, columns=columns)
+        # Ids with empty values (PayPal, no discount) stay integers, not floats:
+    # same type in every file, so BigQuery can read all files together.
+    for col in ("order_id", "discount_id", "payment_id"):
+        df[col] = df[col].astype("Int64")
     df["dt"] = pd.to_datetime(df["order_date"]).dt.strftime("%Y-%m-%d")
 
     # A timestamp in the file name, so two runs never overwrite each other.
