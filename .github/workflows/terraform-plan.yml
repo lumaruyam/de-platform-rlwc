@@ -1,0 +1,53 @@
+name: terraform plan
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform-plan.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      HAS_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.1
+
+      # Always: format and syntax, no cloud access needed.
+      - name: fmt
+        run: terraform fmt -check -recursive
+
+      - name: validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      # Plan needs read access to the project and the state bucket.
+      # It runs only when the repository has the GCP_CREDENTIALS secret.
+      - name: auth
+        if: env.HAS_CREDENTIALS == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: plan
+        if: env.HAS_CREDENTIALS == 'true'
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -lock=false -no-color | tee plan.txt
+          { echo '```'; tail -40 plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: no credentials
+        if: env.HAS_CREDENTIALS != 'true'
+        run: echo "::warning::GCP_CREDENTIALS secret not set, plan skipped (fmt and validate only)."
