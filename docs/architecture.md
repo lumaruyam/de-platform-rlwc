@@ -55,6 +55,12 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | [0002](adr/0002-bronze-layout.md) | Bronze as Parquet (Snappy), partitioned by day | Proposed |
 | [0003](adr/0003-ingestion-modes.md) | Stream the clickstream, batch the database, no change data capture yet | Proposed |
 | [0004](adr/0004-warehouse-pricing.md) | BigQuery on-demand pricing with a 10 MiB billing cap | Proposed |
+| [0005](adr/0005-dbt-medallion-layers.md) | Silver as dbt views, gold as tables, one revenue figure proven by tests | Proposed |
+| [0006](adr/0006-container-images.md) | One pinned, non-root image per job family, no secret inside | Proposed |
+| [0007](adr/0007-orchestration.md) | Airflow, one container per task, idempotent daily load | Proposed |
+| [0008](adr/0008-infrastructure-as-code.md) | Adopt the bucket and datasets in Terraform, remote state | Proposed |
+| [0009](adr/0009-cost-control.md) | Labels, budget in code, our own daily cost alert | Proposed |
+| [0010](adr/0010-data-protection.md) | Mask personal data in silver, gold-only readers | Proposed |
 
 ## Change log
 
