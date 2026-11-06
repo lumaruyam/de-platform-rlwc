@@ -1,13 +1,23 @@
 version: 2
 
+# meta.classification: public | internal | confidential (docs/data-classification.md)
+# meta.pii: none | indirect | direct
+
 models:
   - name: stg_orders
     description: "One row per order, duplicates removed."
+    meta: {classification: confidential}
     columns:
       - name: order_id
         data_tests: [unique, not_null]
+      - name: buyer_id
+        meta: {pii: indirect}
+      - name: payment_id
+        meta: {pii: indirect}
+
   - name: stg_order_items
     description: "One row per product per order."
+    meta: {classification: internal}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -18,7 +28,10 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+
   - name: stg_review
+    description: "One row per review. E-mails and phone numbers masked, author dropped."
+    meta: {classification: internal}
     columns:
       - name: review_id
         data_tests: [unique, not_null]
@@ -28,7 +41,12 @@ models:
               arguments:
                 values: [1, 2, 3, 4, 5]
                 quote: false
+      - name: review_text
+        description: "Free text written by the customer, with [email] and [phone] masks."
+        meta: {pii: none}
+
   - name: stg_product
+    meta: {classification: public}
     columns:
       - name: p_id
         data_tests: [unique, not_null]
@@ -38,5 +56,12 @@ models:
               arguments:
                 to: ref('category')
                 field: category_id
+
   - name: stg_customer_address
     description: "Customer addresses reduced to the country."
+    meta: {classification: confidential}
+    columns:
+      - name: c_id
+        meta: {pii: indirect}
+      - name: country
+        meta: {pii: none}

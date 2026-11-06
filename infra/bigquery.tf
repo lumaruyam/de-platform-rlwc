@@ -5,6 +5,14 @@ locals {
     silver = "dbt silver: cleaned views (L05)"
     gold   = "dbt gold: tables for analysts and the ML team (L05)"
   }
+
+  # Data classification (step 10, docs/data-classification.md).
+  # wh and silver hold buyer ids and addresses; gold holds no personal data.
+  classification = {
+    wh     = "confidential"
+    silver = "confidential"
+    gold   = "internal"
+  }
 }
 
 resource "google_bigquery_dataset" "layer" {
@@ -17,6 +25,7 @@ resource "google_bigquery_dataset" "layer" {
   delete_contents_on_destroy = false
 
   labels = {
-    layer = each.key
+    layer      = each.key
+    data_class = local.classification[each.key]
   }
 }
