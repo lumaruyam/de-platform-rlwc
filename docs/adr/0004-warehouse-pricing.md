@@ -1,8 +1,9 @@
-# ADR 0004: BigQuery pricing model
+# ADR-0004: Pay BigQuery on demand, with a 10 MiB cap per query
 
-## Status
-
-Proposed, 2026-11-06.
+- **Status:** proposed
+- **Date:** 2026-11-06
+- **Author:** Rania Mehria
+- **Lesson:** L04
 
 ## Context
 
@@ -16,17 +17,17 @@ BigQuery bills compute in two ways:
 Prices read on cloud.google.com/bigquery/pricing on 2026-11-06 (list prices;
 the europe-west1 rate may be a little higher).
 
-Our volume, measured in step 4 (`docs/warehouse-tuning.md`):
+Our volume, measured in L04 (`docs/warehouse-tuning.md`):
 
 - Biggest query on a tuned table: 4.29 MiB processed.
-- Every query we ran this morning together: under 100 MiB.
+- Every query we ran on 2026-11-06 together: under 100 MiB.
 - Even 1,000 queries a month at 13 MiB each is about 13 GiB,
   about 1% of the free TiB.
 
 Who queries: our group, the ML team (daily demand), and a few dashboards.
 Load is small and comes in short bursts, not all day.
 
-## Options
+## Options considered
 
 1. **On-demand + billing cap.** Pay per query. Cap each query at 10 MiB
    ("Maximum bytes billed").
@@ -35,6 +36,16 @@ Load is small and comes in short bursts, not all day.
 3. **Standard edition with autoscaling only.** Pay only for slots in use,
    billed per second with a 1-minute minimum. Needs a reservation to set up
    and watch.
+
+## Criteria
+
+| Criterion | Why it matters | 1. On-demand + cap | 2. Reserved slots | 3. Autoscaling |
+|---|---|---|---|---|
+| Cost at our volume | Small, bursty load | $0 (free TiB) | about $1,460 / month | low, but not zero |
+| Protection from a runaway query | One bad query must not cost a lot | Cap refuses it before it runs | Fixed cost, but slows other queries | Can scale up and bill more |
+| Rewards good tables | Partitions and views should lower the bill | Yes: we pay for bytes read | No: cost is the same | Partly |
+| Effort to run | Small team, shared class project | Nothing to set up | Reservation to size and watch | Reservation to set up |
+| Rights needed | We are not admins of the project | None | Admin | Admin |
 
 ## Decision
 
