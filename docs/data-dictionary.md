@@ -171,3 +171,36 @@ Partitioned by `event_time`. Schema: [`ingestion/clickstream.schema.json`](../in
 | `reason` | Why it was rejected | No |
 | `received_at` | When our consumer read it. Decides the `dt=` folder. | No |
 | `topic`, `partition`, `offset` | Where to find the message again in Kafka | No |
+
+## Warehouse (BigQuery, step 4)
+
+Dataset `data-engineering-i2.group2_wh`, region `europe-west1`.
+SQL in `warehouse/`, measures in `docs/warehouse-tuning.md`.
+
+### Tables and views
+
+| Name | Type | Built from | Notes |
+|---|---|---|---|
+| `ext_*` (8 tables) | external | Parquet files in `bronze/` | No copy. `ext_orders`, `ext_order_items` and `ext_orders_extract` get `dt` as a DATE partition column |
+| `orders` | native | `ext_orders` | `dt` renamed `order_date`. Ids as INT64 |
+| `order_items` | native | `ext_order_items` | `qty` INT64, `price_at_purchase` NUMERIC (exact, for money) |
+| `review`, `product_reviews` | native | `ext_review`, `ext_product_reviews` | `rating` INT64. No date column |
+| `product` | native | `ext_product` | `price` FLOAT64, `category_id` INT64 |
+| `customer_shipping`, `shipping_details` | native | `ext_*` | `zip` and `phone` stay text, to keep leading zeros and "+" |
+| `orders_p`, `order_items_p` | native | the native tables | Partitioned by month of `order_date` |
+| `order_items_pc` | native | `order_items` | Partitioned by month, clustered by `p_id` |
+| `mv_daily_demand` | materialized view | `order_items_p` | One row per day and product: `units`, `revenue`, `order_lines`. For the ML team |
+| `mv_daily_demand_category` | materialized view | `order_items_p` + `product` | One row per day and range: same measures. For dashboards |
+
+Personal data in the warehouse follows the bronze columns above:
+`buyer_id` (Yes, indirect), `shipping_details` address and phone (Yes, direct).
+`customer` and `payment_details` are not loaded.
+
+### Known issues found in step 4
+
+| Column | Issue | What we do |
+|---|---|---|
+| `review.seller_product_flag` | `S` on all 111,322 rows. Tells nothing | Not used. Every review counts as a product review |
+| `product.category_id` | Only 2 values: 1 = All Beauty (42,637 products), 2 = Premium Beauty (221). Checked in the source table `category` | Not a bug: the catalogue has two ranges. The `category` table itself is not loaded yet (names come from the source) |
+| `orders_extract.payment_id`, `discount_id` | FLOAT in some files, INT in others: pandas turns a column with empty values (PayPal, no discount) into FLOAT | `orders` is loaded from `ext_orders` (step 2 copy). Fix planned in `ingestion/extract_orders.py` (nullable `Int64`) |
+| Native tables | Loaded with `SAFE_CAST`: an unreadable value becomes NULL silently | Row counts checked table by table. NULL checks planned in silver |

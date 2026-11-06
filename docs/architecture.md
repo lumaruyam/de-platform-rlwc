@@ -4,7 +4,7 @@
 
 Albert's Marketplace is a European marketplace for beauty products. Today, one PostgreSQL database serves both the web shop and the analysts, so reports slow down checkout and two reports give two different revenue figures. The platform must serve two users: analysts, who need one agreed revenue figure, and the ML team, who need units sold per product, per country, per day. Daily freshness is enough for both; nothing needs real-time data. Two constraints matter: the shop's database must not carry analytical load, and passwords and card numbers must never leave it.
 
-## Architecture (after L03)
+## Architecture (after L04)
 
 Solid lines exist today. Dotted lines are planned.
 
@@ -23,13 +23,21 @@ flowchart LR
   ext --> bronze
   cons --> bronze
   cons -->|invalid events| dlq
-  bronze -.->|"planned L04-L05"| silver[("Silver<br/>one agreed version")]
-  silver -.-> gold[("Gold<br/>star schemas")]
+  subgraph bq["BigQuery · group2_wh · europe-west1"]
+    wh[("Warehouse<br/>external + typed native tables<br/>monthly partitions, 2 materialized views")]
+    silver[("Silver<br/>one agreed version")]
+    gold[("Gold<br/>star schemas")]
+  end
+  bronze -->|"external tables, typed copy"| wh
+  wh -.->|"planned L05 (dbt)"| silver
+  silver -.-> gold
   gold -.->|revenue reports| analysts[Analysts]
   gold -.->|daily demand| ml[ML team]
 ```
 
 Three paths write into bronze without a person: see [ADR-0003](adr/0003-ingestion-modes.md) for which mode each source uses, and [ingestion-failure-modes.md](ingestion-failure-modes.md) for what each one loses or duplicates. The first load, in L02, was done once by hand with [`ingestion/load_bronze_export.py`](../ingestion/load_bronze_export.py).
+
+Bronze is read by BigQuery in the same region. Fact tables are partitioned by month, and two materialized views precompute daily demand per product and per range. Measures and choices are in [warehouse-tuning.md](warehouse-tuning.md); the pricing model is in [ADR-0004](adr/0004-warehouse-pricing.md). Demand per country is not in the views yet: it needs the buyer's address, and comes with gold in L05.
 
 ## Layers
 
@@ -46,6 +54,7 @@ Three paths write into bronze without a person: see [ADR-0003](adr/0003-ingestio
 | [0001](adr/0001-target-architecture.md) | Adopt a lakehouse with bronze, silver and gold layers | Proposed |
 | [0002](adr/0002-bronze-layout.md) | Bronze as Parquet (Snappy), partitioned by day | Proposed |
 | [0003](adr/0003-ingestion-modes.md) | Stream the clickstream, batch the database, no change data capture yet | Proposed |
+| [0004](adr/0004-warehouse-pricing.md) | BigQuery on-demand pricing with a 10 MiB billing cap | Proposed |
 
 ## Change log
 
@@ -54,3 +63,4 @@ Three paths write into bronze without a person: see [ADR-0003](adr/0003-ingestio
 | L01 | First version: context, target diagram, layer guarantees |
 | L02 | The diagram shows what exists: the bucket, its region, its layout, who can read it, and how bronze was filled |
 | L03 | Three paths into bronze: Airbyte, the orders extractor, the clickstream consumer; dead letter queue |
+| L04 | BigQuery warehouse: typed native tables, monthly partitions, clustering, two materialized views, billing cap |
