@@ -57,9 +57,9 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | [0004](adr/0004-warehouse-pricing.md) | BigQuery on-demand pricing with a 10 MiB billing cap | Proposed |
 | [0005](adr/0005-dbt-medallion-layers.md) | Silver as dbt views, gold as tables, one revenue figure proven by tests | Proposed |
 | [0006](adr/0006-image-tags.md) | Tag images with the git commit, never latest, keep the last 5 versions | Proposed |
-| [0007](adr/0007-orchestration.md) | Airflow, one container per task, idempotent daily load | Proposed |
+| [0007](adr/0007-idempotency.md) | Make every task idempotent, so any run can be repeated safely | Proposed |
 | [0008](adr/0008-infrastructure-as-code.md) | Adopt the bucket and datasets in Terraform, remote state | Proposed |
-| [0009](adr/0009-cost-control.md) | Labels, budget in code, our own daily cost alert | Proposed |
+| [0009](adr/0009-cost-attribution.md) | Label every resource for cost attribution, budget in code, daily cost alert | Proposed |
 | [0010](adr/0010-data-protection.md) | Mask personal data in silver, gold-only readers | Proposed |
 
 ## Change log
@@ -74,5 +74,5 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | L06 | Dockerfiles for the ingestion jobs and dbt: see `docs/packaging.md` |
 | L07 | Airflow DAG `marketplace_daily_group2`: extract, load, dbt build, freshness, every day. See `docs/orchestration.md` |
 | L08 | Bucket and datasets declared in Terraform (`infra/`), imported with no change, remote state, `terraform plan` in CI. See `docs/infrastructure-as-code.md` |
-| L09 | Labels on every resource (Terraform), budget in code (off: no billing rights), daily cost alert in Airflow, partitioning gain in USD. See `docs/finops.md` |
+| L09 | Labels on every resource (Terraform), budget in code (off: no billing rights), daily cost alert in Airflow, partitioning gain in USD. See `docs/costs.md` |
 | L10 | PII redaction in dbt (reviews masked, author dropped), data classification labels, gold-only readers in Terraform, Airflow Fernet key. See `docs/security.md` |

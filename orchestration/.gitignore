@@ -2,3 +2,4 @@
 logs/
 plugins/
 config/
+.alert_topic

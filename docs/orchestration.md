@@ -54,3 +54,33 @@ docker compose up -d      # UI on http://localhost:8080
 docker compose exec airflow-scheduler airflow variables set pg_password <password>
 docker compose exec airflow-scheduler airflow dags unpause marketplace_daily_group2
 ```
+
+## Quality gate drill (2026-11-06)
+
+A row with `qty = 0` and an unknown product was inserted into `group2_wh.order_items`.
+
+| Run | extract_orders | load_warehouse | dbt_build | dbt_freshness | cost_check |
+|---|---|---|---|---|---|
+| `gate_drill_2` | success | success | **failed** (3 tries) | upstream_failed | success |
+
+dbt: `[ERROR] in test dbt_utils_expression_is_true_stg_order_items_qty___0`, PASS=39 ERROR=1 SKIP=17.
+Gold kept 450,342 order lines and 0 drill rows: the gate stopped the bad row before gold.
+The on-call person received the push alert at 20:12 (`docs/evidence/alert-gate-drill-2.png`).
+The first drill (`gate_drill_1959`) sent no alert: the callback read `data_interval_start`, which a
+manual run does not have in Airflow 3. Fixed to `run_id` (ADR-0007).
+Repair: drill row deleted, DAG triggered (`repair_after_drill`): all 5 tasks success.
+
+## Back-fill (2026-11-06)
+
+`airflow backfill create --dag-id marketplace_daily_group2 --from-date 2026-11-03 --to-date 2026-11-05`,
+with the shop's traffic generator stopped so that no new order could arrive.
+
+| Measure | Before (19:17Z) | After (19:19Z) |
+|---|---|---|
+| `group2_wh.orders` | 244,969 | 244,969 |
+| `group2_wh.order_items` | 450,342 | 450,342 |
+| `group2_gold.fct_order_items` | 450,342 | 450,342 |
+| Gold revenue, all months | 43,094,831.88 | 43,094,831.88 |
+
+Runs `backfill__2026-11-03`, `-04`, `-05`: success. Three past days re-run, nothing duplicated,
+revenue identical to the cent: rerunning any interval gives the same result.

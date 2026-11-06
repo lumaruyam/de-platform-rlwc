@@ -55,6 +55,33 @@ resource "google_storage_bucket" "lake" {
   }
 
   # The bucket holds the data and the Terraform state: never destroy it from code.
+  # Versioning: the Terraform state lives here (ADR-0008); a bad write can be rolled back.
+  # Bronze files are never overwritten (unique names), so old versions only pile up for the
+  # state and the cursor files: keep at most 10, for at most 30 days.
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      num_newer_versions = 10
+      with_state         = "ARCHIVED"
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      days_since_noncurrent_time = 30
+      with_state                 = "ARCHIVED"
+    }
+  }
+
   # Encryption enforcement is set by Google on the project, not by us: leave it as it is.
   lifecycle {
     prevent_destroy = true

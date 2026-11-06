@@ -44,10 +44,27 @@ COST = LOAD.replace("/sql/load.sql", "/sql/cost.sql")
 
 
 def alert(context):
-    """Runs only when a task has failed for the last time."""
+    """Runs when a task has failed for the last time.
+
+    Sends a push notification to the on-call person (Rania Mehria) through ntfy.
+    The topic is the Airflow Variable alert_topic: never in Git.
+    """
+    import urllib.request
+
+    from airflow.sdk import Variable
+
     ti = context["task_instance"]
-    print(f"ALERT {ti.dag_id}.{ti.task_id} failed for "
-          f"{context['data_interval_start']} after {ti.try_number} tries", flush=True)
+    # run_id, not data_interval_start: a manually triggered run has no data interval
+    # in Airflow 3, and the first version of this alert crashed on it (gate drill, 2026-11-06).
+    msg = (f"{ti.dag_id}.{ti.task_id} failed in run {ti.run_id} "
+           f"after {ti.try_number} tries. Runbook: docs/runbooks/failed-run.md")
+    print("ALERT " + msg, flush=True)
+    topic = Variable.get("alert_topic", default=None)
+    if topic:
+        req = urllib.request.Request(
+            f"https://ntfy.sh/{topic}", data=msg.encode(),
+            headers={"Title": "Airflow: group 2 pipeline failed", "Priority": "high"})
+        urllib.request.urlopen(req, timeout=10)
 
 
 COMMON = {"auto_remove": "success", "mount_tmp_dir": False}
