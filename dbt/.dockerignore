@@ -3,3 +3,5 @@ logs/
 dbt_packages/
 .user.yml
 Dockerfile
+.venv/
+venv/

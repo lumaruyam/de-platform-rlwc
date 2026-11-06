@@ -52,6 +52,13 @@ def alert(context):
 
 COMMON = {"auto_remove": "success", "mount_tmp_dir": False}
 
+# Images from the class registry, tagged with the git commit they were built from (ADR-0006).
+# Bump IMAGE_TAG after scripts/release_images.sh.
+REGISTRY = "europe-west1-docker.pkg.dev/data-engineering-i2/dataeng"
+IMAGE_TAG = "4219782"
+INGESTION_IMAGE = f"{REGISTRY}/group2-ingestion:{IMAGE_TAG}"
+DBT_IMAGE = f"{REGISTRY}/group2-dbt:{IMAGE_TAG}"
+
 with DAG(
     dag_id="marketplace_daily_group2",
     schedule="@daily",
@@ -72,7 +79,7 @@ with DAG(
     # so Airflow masks it in the UI and the logs.
     extract_orders = DockerOperator(
         task_id="extract_orders",
-        image="group2-ingestion:0.1",
+        image=INGESTION_IMAGE,
         network_mode="albert-marketplace_default",
         environment={
             **GOOGLE_ENV,
@@ -86,7 +93,7 @@ with DAG(
     # MERGE new orders and order lines into group2_wh (idempotent).
     load_warehouse = DockerOperator(
         task_id="load_warehouse",
-        image="group2-dbt:0.1",
+        image=DBT_IMAGE,
         entrypoint=["python"],
         command=["-c", LOAD],
         environment=GOOGLE_ENV,
@@ -97,7 +104,7 @@ with DAG(
     # Silver and gold, with the 35 tests. A failed test fails the task.
     dbt_build = DockerOperator(
         task_id="dbt_build",
-        image="group2-dbt:0.1",
+        image=DBT_IMAGE,
         command="build",
         environment=GOOGLE_ENV,
         mounts=[gcloud],
@@ -107,7 +114,7 @@ with DAG(
     # Is the newest order recent enough? Fails after 7 days without new data.
     dbt_freshness = DockerOperator(
         task_id="dbt_freshness",
-        image="group2-dbt:0.1",
+        image=DBT_IMAGE,
         command="source freshness",
         environment=GOOGLE_ENV,
         mounts=[gcloud],
@@ -117,7 +124,7 @@ with DAG(
     # Our own cost alert. Runs even if an earlier task failed (all_done).
     cost_check = DockerOperator(
         task_id="cost_check",
-        image="group2-dbt:0.1",
+        image=DBT_IMAGE,
         entrypoint=["python"],
         command=["-c", COST],
         environment=GOOGLE_ENV,
