@@ -204,3 +204,8 @@ Personal data in the warehouse follows the bronze columns above:
 | `product.category_id` | Only 2 values: 1 = All Beauty (42,637 products), 2 = Premium Beauty (221). Checked in the source table `category` | Not a bug: the catalogue has two ranges. The `category` table itself is not loaded yet (names come from the source) |
 | `orders_extract.payment_id`, `discount_id` | FLOAT in some files, INT in others: pandas turns a column with empty values (PayPal, no discount) into FLOAT | `orders` is loaded from `ext_orders` (step 2 copy). Fix planned in `ingestion/extract_orders.py` (nullable `Int64`) |
 | Native tables | Loaded with `SAFE_CAST`: an unreadable value becomes NULL silently | Row counts checked table by table. NULL checks planned in silver |
+### Known issue found in step 7
+
+| Column | Issue | What we do |
+|---|---|---|
+| `orders.order_date` | 8,189 orders dated after today (2026-11-07 to 2026-12-02, ids 236,548 to 244,743): the traffic simulator's clock runs ahead | Kept. dbt test `assert_no_future_orders` warns on every run |

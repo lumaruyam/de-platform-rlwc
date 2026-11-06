@@ -1,0 +1,43 @@
+services:
+  airflow-worker:
+    build: .
+    image: albert-airflow:3.3.2
+    environment:
+      HOST_DIR: ${HOST_DIR}
+      GCLOUD_DIR: ${GCLOUD_DIR}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  airflow-scheduler:
+    build: .
+    image: albert-airflow:3.3.2
+    environment:
+      HOST_DIR: ${HOST_DIR}
+      GCLOUD_DIR: ${GCLOUD_DIR}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  airflow-dag-processor:
+    build: .
+    image: albert-airflow:3.3.2
+    environment:
+      HOST_DIR: ${HOST_DIR}
+      GCLOUD_DIR: ${GCLOUD_DIR}
+
+  airflow-apiserver:
+    build: .
+    image: albert-airflow:3.3.2
+    environment:
+      HOST_DIR: ${HOST_DIR}
+      GCLOUD_DIR: ${GCLOUD_DIR}
+
+  airflow-triggerer:
+    build: .
+    image: albert-airflow:3.3.2
+    environment:
+      HOST_DIR: ${HOST_DIR}
+      GCLOUD_DIR: ${GCLOUD_DIR}
+
+  airflow-init:
+    build: .
+    image: albert-airflow:3.3.2

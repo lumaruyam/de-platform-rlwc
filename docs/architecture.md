@@ -4,7 +4,7 @@
 
 Albert's Marketplace is a European marketplace for beauty products. Today, one PostgreSQL database serves both the web shop and the analysts, so reports slow down checkout and two reports give two different revenue figures. The platform must serve two users: analysts, who need one agreed revenue figure, and the ML team, who need units sold per product, per country, per day. Daily freshness is enough for both; nothing needs real-time data. Two constraints matter: the shop's database must not carry analytical load, and passwords and card numbers must never leave it.
 
-## Architecture (after L05)
+## Architecture (after L07)
 
 Solid lines exist today. Dotted lines are planned.
 
@@ -65,3 +65,5 @@ Bronze is read by BigQuery in the same region. Fact tables are partitioned by mo
 | L03 | Three paths into bronze: Airbyte, the orders extractor, the clickstream consumer; dead letter queue |
 | L04 | BigQuery warehouse: typed native tables, monthly partitions, clustering, two materialized views, billing cap |
 | L05 | Silver and gold built with dbt (group2_silver, group2_gold): 14 models, 35 tests, revenue reconciled to the cent, source freshness check |
+| L06 | Dockerfiles for the ingestion jobs and dbt: see `docs/packaging.md` |
+| L07 | Airflow DAG `marketplace_daily_group2`: extract, load, dbt build, freshness, every day. See `docs/orchestration.md` |
