@@ -118,3 +118,56 @@ Personal data:
 | Text values like `NA` written as words | `review.r_desc`, `review.title` | keep them: they are real text, not missing values |
 | Prices with float noise (many decimals) | `product.price` | round to 2 decimals |
 | Leading zeros in ids and phones | `p_id`, `zip`, `phone` | keep as text, never cast to a number |
+
+
+## Where each bronze table comes from (L03)
+
+Bronze no longer has one shape. Whoever models silver must check the path first.
+
+| Folder in bronze | Written by | Extra columns | Notes |
+|---|---|---|---|
+| `orders/`, `order_items/` and the 5 reference tables | `ingestion/load_bronze_export.py`, once, by hand (L02) | none | All columns stored as text |
+| `orders_extract/` | `ingestion/extract_orders.py` (incremental, cursor `order_id`) | none | Typed by PostgreSQL: `order_id` integer, `order_date` date |
+| `clickstream/` | `ingestion/consume_clickstream.py` (Kafka) | none | See the clickstream section below |
+| `_dlq/clickstream/` | `ingestion/consume_clickstream.py` | | Rejected events, see below |
+| Airbyte folders | The Airbyte connection (7 tables) | `_airbyte_raw_id`, `_airbyte_extracted_at`, `_airbyte_meta`, `_airbyte_generation_id` | Added after the first sync |
+
+The 4 Airbyte columns:
+
+| Column | Meaning |
+|---|---|
+| `_airbyte_raw_id` | A unique id Airbyte gives each row it writes |
+| `_airbyte_extracted_at` | When Airbyte read the row from the source |
+| `_airbyte_meta` | Airbyte's notes on the row, for example a value it had to change |
+| `_airbyte_generation_id` | Which full refresh the row belongs to |
+
+## clickstream (Kafka topic `clickstream`, schema_version 1)
+
+Partitioned by `event_time`. Schema: [`ingestion/clickstream.schema.json`](../ingestion/clickstream.schema.json).
+
+| Field | Type | In which events | Meaning | Personal data |
+|---|---|---|---|---|
+| `schema_version` | integer | all | Version of the event shape. Decides which schema checks it. | No |
+| `event_id` | string (UUID) | all | Unique id of the event. Used to remove duplicates in silver. | No |
+| `event_type` | string | all | `product_viewed`, `added_to_cart` or `order_placed` | No |
+| `event_time` | timestamp (UTC) | all | When it happened. Decides the `dt=` folder. | No |
+| `emitted_at` | timestamp (UTC) | all | When it was sent to Kafka. Can be later than `event_time`. | No |
+| `session_id` | string (UUID) | all | One visit to the shop. | Yes, indirect: always sent with `buyer_id`, so it ties a whole visit to a person |
+| `buyer_id` | string | all | The customer. Same id as `orders.buyer_id`. | Yes, indirect |
+| `p_id` | string | `product_viewed`, `added_to_cart` | Product. Can start with 0: keep as text. | No |
+| `price` | number | `product_viewed`, `added_to_cart` | Price shown to the customer | No |
+| `qty` | integer | `added_to_cart` | Units added to the basket | No |
+| `order_id` | integer | `order_placed` | The order created. Joins to `orders.order_id`. | No |
+| `payment_method` | string | `order_placed` | `Credit Card` or `PayPal` | No |
+| `amount` | number | `order_placed` | Total paid | No |
+| `currency` | string | `order_placed` | Always `EUR` so far | No |
+| `items` | JSON text | `order_placed` | The basket lines: `p_id`, `qty`, `price`. Stored as JSON text so every file has the same column type. | No |
+
+## _dlq/clickstream (rejected events)
+
+| Column | Meaning | Personal data |
+|---|---|---|
+| `raw` | The message exactly as it arrived | Maybe: it can hold a `buyer_id` |
+| `reason` | Why it was rejected | No |
+| `received_at` | When our consumer read it. Decides the `dt=` folder. | No |
+| `topic`, `partition`, `offset` | Where to find the message again in Kafka | No |
