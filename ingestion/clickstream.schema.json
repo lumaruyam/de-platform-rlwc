@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clickstream-v1",
+  "title": "Albert's Marketplace clickstream event, schema_version 1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "event_time", "emitted_at", "session_id", "buyer_id"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"enum": ["product_viewed", "added_to_cart", "order_placed"]},
+    "event_time": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T"},
+    "emitted_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T"},
+    "session_id": {"type": "string", "minLength": 1},
+    "buyer_id": {"type": "string", "minLength": 1},
+    "p_id": {"type": "string"},
+    "price": {"type": "number", "minimum": 0},
+    "qty": {"type": "integer", "minimum": 1},
+    "order_id": {"type": "integer"},
+    "payment_method": {"type": "string"},
+    "amount": {"type": "number", "minimum": 0},
+    "currency": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["p_id", "qty", "price"],
+        "properties": {
+          "p_id": {"type": "string"},
+          "qty": {"type": "integer", "minimum": 1},
+          "price": {"type": "number", "minimum": 0}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"event_type": {"const": "product_viewed"}}},
+     "then": {"required": ["p_id", "price"]}},
+    {"if": {"properties": {"event_type": {"const": "added_to_cart"}}},
+     "then": {"required": ["p_id", "qty", "price"]}},
+    {"if": {"properties": {"event_type": {"const": "order_placed"}}},
+     "then": {"required": ["order_id", "payment_method", "amount", "currency", "items"]}}
+  ]
+}
